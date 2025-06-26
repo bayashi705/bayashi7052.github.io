@@ -153,7 +153,7 @@
 
     // プレイヤー
     const player = {
-        width: 40,
+        width: 30,
         height: 20,
         x: 0,
         y: 0,
@@ -169,7 +169,7 @@
     // インベーダー
     let invaders = [];
     const invaderSize = 20;
-    let invaderSpeed = 0.5;
+    let invaderBaseSpeed = 0.5;
     const invaderFireChance = 0.005;
     let invaderSpawnInterval;
 
@@ -203,7 +203,7 @@
         
         invaders = [];
         items = [];
-        invaderSpeed = 0.5;
+        invaderBaseSpeed = 0.5;
         bullets.length = 0;
         isPowerUpActive = false;
         
@@ -225,9 +225,24 @@
     function spawnInvader() {
         if (gameOver) return;
         const initialX = Math.random() * (canvas.width - invaderSize);
+        const rand = Math.random();
+        let invaderType;
+        
+        if (rand < 0.6) {
+            invaderType = 'wobble';
+        } else if (rand < 0.85) {
+            invaderType = 'straight';
+        } else {
+            invaderType = 'homing';
+        }
+
         invaders.push({
+            type: invaderType,
             x: initialX, y: 0, width: invaderSize, height: invaderSize,
-            color: 'white', initialX: initialX, movePhase: Math.random() * Math.PI * 2
+            color: invaderType === 'straight' ? '#ff4d4d' : (invaderType === 'homing' ? '#4dffff' : 'white'),
+            initialX: initialX,
+            movePhase: Math.random() * Math.PI * 2,
+            fireCooldown: 120,
         });
     }
     
@@ -241,51 +256,41 @@
         });
     }
 
-    function fireBullet() {
+    function fireBullet(team, x, y, options = {}) {
         if (gameOver) return;
-        bullets.push({
-            x: player.x + player.width / 2 - 2.5, y: player.y,
-            width: 5, height: 10, color: player.color,
-            speed: -bulletSpeed, team: 'player'
-        });
+        
+        const bulletData = {
+            team: team,
+            x: x, y: y,
+            width: 5, height: 10,
+            speed: options.speed !== undefined ? options.speed : (team === 'player' ? -bulletSpeed : bulletSpeed),
+            color: team === 'player' ? player.color : 'red',
+            ...options,
+        };
+        
+        // ★★★ 追加点: ホーミング弾に初期方向を与える ★★★
+        if (options.type === 'homing') {
+            const angle = Math.atan2((player.y + player.height / 2) - y, (player.x + player.width / 2) - x);
+            bulletData.dx = Math.cos(angle);
+            bulletData.dy = Math.sin(angle);
+        }
+
+        bullets.push(bulletData);
     }
     
     function setAutoFire(isPoweredUp) {
         if (autoFireInterval) clearInterval(autoFireInterval);
-        const interval = isPoweredUp ? 100 : 300;
-        autoFireInterval = setInterval(fireBullet, interval);
+        const interval = isPoweredUp ? 133 : 400;
+        autoFireInterval = setInterval(() => fireBullet('player', player.x + player.width / 2 - 2.5, player.y), interval);
     }
     
     document.addEventListener('keydown', (e) => { if(keys[e.code] !== undefined) keys[e.code] = true; });
     document.addEventListener('keyup', (e) => { if(keys[e.code] !== undefined) keys[e.code] = false; });
     
-    touchControlArea.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        isDragging = true;
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-        playerStartX = player.x;
-        playerStartY = player.y;
-    });
-
-    touchControlArea.addEventListener('touchmove', (e) => {
-        if (!isDragging || gameOver) return;
-        e.preventDefault();
-        const deltaX = e.touches[0].clientX - touchStartX;
-        const deltaY = e.touches[0].clientY - touchStartY;
-        
-        player.x = playerStartX + deltaX;
-        player.y = playerStartY + deltaY;
-
-        if (player.x < -player.width / 2) player.x = -player.width / 2;
-        if (player.x > canvas.width - player.width / 2) player.x = canvas.width - player.width / 2;
-        if (player.y < canvas.height / 2) player.y = canvas.height / 2;
-        if (player.y > canvas.height - player.height) player.y = canvas.height - player.height;
-    });
-
+    touchControlArea.addEventListener('touchstart', (e) => { e.preventDefault(); isDragging = true; touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; playerStartX = player.x; playerStartY = player.y; });
+    touchControlArea.addEventListener('touchmove', (e) => { if (!isDragging || gameOver) return; e.preventDefault(); const deltaX = e.touches[0].clientX - touchStartX; const deltaY = e.touches[0].clientY - touchStartY; player.x = playerStartX + deltaX; player.y = playerStartY + deltaY; if (player.x < -player.width / 2) player.x = -player.width / 2; if (player.x > canvas.width - player.width / 2) player.x = canvas.width - player.width / 2; if (player.y < canvas.height / 2) player.y = canvas.height / 2; if (player.y > canvas.height - player.height) player.y = canvas.height - player.height; });
     touchControlArea.addEventListener('touchend', () => { isDragging = false; });
     touchControlArea.addEventListener('touchcancel', () => { isDragging = false; });
-    
 
     function handlePlayerInput() {
         if (keys.ArrowLeft) player.x -= player.speed;
@@ -309,23 +314,72 @@
     }
 
     function updateGameObjects() {
+        // 弾の更新
         for (let i = bullets.length - 1; i >= 0; i--) {
-            bullets[i].y += bullets[i].speed;
-            if (bullets[i].y < 0 || bullets[i].y > canvas.height) bullets.splice(i, 1);
+            const bullet = bullets[i];
+            
+            // ★★★ 修正点: ホーミング弾の追尾ロジック ★★★
+            if (bullet.type === 'homing') {
+                const targetAngle = Math.atan2((player.y + player.height / 2) - bullet.y, (player.x + player.width / 2) - bullet.x);
+                const targetDx = Math.cos(targetAngle);
+                const targetDy = Math.sin(targetAngle);
+                
+                // 現在の進行方向とターゲット方向をブレンドして、追尾を緩やかにする
+                const turnSpeed = 0.02; // この値を小さくすると追尾が弱くなる
+                bullet.dx = bullet.dx * (1 - turnSpeed) + targetDx * turnSpeed;
+                bullet.dy = bullet.dy * (1 - turnSpeed) + targetDy * turnSpeed;
+                
+                // 方向ベクトルを正規化して速度を一定に保つ
+                const magnitude = Math.sqrt(bullet.dx * bullet.dx + bullet.dy * bullet.dy);
+                bullet.dx /= magnitude;
+                bullet.dy /= magnitude;
+
+                bullet.x += bullet.dx * bullet.speed;
+                bullet.y += bullet.dy * bullet.speed;
+
+            } else {
+                bullet.y += bullet.speed;
+            }
+            // ★★★ 修正点: 画面外に出た弾を消す（左右も判定） ★★★
+            if (bullet.y < 0 || bullet.y > canvas.height || bullet.x < 0 || bullet.x > canvas.width) {
+                bullets.splice(i, 1);
+            }
         }
 
+        // 敵の更新
         for (let i = invaders.length - 1; i >= 0; i--) {
             const invader = invaders[i];
-            invader.y += invaderSpeed;
-            invader.x = invader.initialX + Math.sin(invader.y * 0.03 + invader.movePhase) * 40;
+            
+            switch(invader.type) {
+                case 'wobble':
+                    invader.y += invaderBaseSpeed;
+                    invader.x = invader.initialX + Math.sin(invader.y * 0.03 + invader.movePhase) * 40;
+                    break;
+                case 'straight':
+                    invader.y += invaderBaseSpeed * 1.5;
+                    break;
+                case 'homing':
+                    invader.y += invaderBaseSpeed * 0.7;
+                    invader.x = invader.initialX + Math.sin(invader.y * 0.01 + invader.movePhase) * 100;
+                    
+                    if (invader.fireCooldown <= 0) {
+                        fireBullet('invader', invader.x + invader.width / 2 - 2.5, invader.y + invader.height, { type: 'homing', color: '#ff80ff', speed: bulletSpeed / 3 });
+                        invader.fireCooldown = 200;
+                    }
+                    invader.fireCooldown--;
+                    break;
+            }
+
             if (invader.y > canvas.height) invaders.splice(i, 1);
-            if (Math.random() < invaderFireChance) {
-                bullets.push({ x: invader.x + invader.width / 2 - 2.5, y: invader.y + invader.height, width: 5, height: 10, color: 'red', speed: bulletSpeed, team: 'invader' });
+
+            if (invader.type !== 'homing' && Math.random() < invaderFireChance) {
+                fireBullet('invader', invader.x + invader.width / 2 - 2.5, invader.y + invader.height, {color: 'red'});
             }
         }
         
+        // アイテムの更新
         for (let i = items.length - 1; i >= 0; i--) {
-            items[i].y += invaderSpeed;
+            items[i].y += invaderBaseSpeed;
             if (items[i].y > canvas.height) items.splice(i, 1);
         }
     }
@@ -360,9 +414,9 @@
                     score += 10;
                     updateUI();
                     if (score > 0 && score % 100 === 0) {
-                         invaderSpeed += 0.1;
+                         invaderBaseSpeed += 0.1;
                          clearInterval(invaderSpawnInterval);
-                         const newInterval = Math.max(300, 1600 - score * 2);
+                         const newInterval = Math.max(200, 1500 - score * 2);
                          invaderSpawnInterval = setInterval(spawnInvader, newInterval);
                     }
                     break;
@@ -404,19 +458,13 @@
             }
         }
         
-        // ★★★ 修正点: 勝利条件を1000点に変更 ★★★
-        if (score >= 1000) {
-            endGame(true);
-        }
+        if (score >= 1000) endGame(true);
     }
     
     function activatePowerUp() {
-        if (isPowerUpActive) {
-            clearTimeout(powerUpTimer);
-        }
+        if (isPowerUpActive) clearTimeout(powerUpTimer);
         isPowerUpActive = true;
         setAutoFire(true);
-
         powerUpTimer = setTimeout(() => {
             isPowerUpActive = false;
             setAutoFire(false);
@@ -428,7 +476,6 @@
         const obj1Height = obj1.height || obj1.size;
         const obj2Width = obj2.width || obj2.size;
         const obj2Height = obj2.height || obj2.size;
-
         return obj1.x < obj2.x + obj2Width &&
                obj1.x + obj1Width > obj2.x &&
                obj1.y < obj2.y + obj2Height &&
@@ -448,7 +495,6 @@
         clearInterval(autoFireInterval);
         clearInterval(itemSpawnInterval);
         clearTimeout(powerUpTimer);
-
         modalTitle.textContent = isWin ? '勝利！' : 'ゲームオーバー';
         finalScoreEl.textContent = `SCORE: ${score}`;
         gameOverModal.style.display = 'flex';
