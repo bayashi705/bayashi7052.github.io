@@ -252,7 +252,7 @@
     
     function setAutoFire(isPoweredUp) {
         if (autoFireInterval) clearInterval(autoFireInterval);
-        const interval = isPoweredUp ? 133 : 400;
+        const interval = isPoweredUp ? 100 : 300;
         autoFireInterval = setInterval(fireBullet, interval);
     }
     
@@ -362,7 +362,7 @@
                     if (score > 0 && score % 100 === 0) {
                          invaderSpeed += 0.1;
                          clearInterval(invaderSpawnInterval);
-                         const newInterval = Math.max(200, 1500 - score * 2);
+                         const newInterval = Math.max(300, 1600 - score * 2);
                          invaderSpawnInterval = setInterval(spawnInvader, newInterval);
                     }
                     break;
