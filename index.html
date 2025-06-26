@@ -163,7 +163,7 @@
 
     // 弾
     const bullets = [];
-    const bulletSpeed = 8;
+    const bulletSpeed = 5;
     let autoFireInterval;
 
     // インベーダー
@@ -263,12 +263,12 @@
             team: team,
             x: x, y: y,
             width: 5, height: 10,
-            speed: options.speed !== undefined ? options.speed : (team === 'player' ? -bulletSpeed : bulletSpeed),
+            // ★★★ 修正点: プレイヤーの弾の速度を変更 ★★★
+            speed: options.speed !== undefined ? options.speed : (team === 'player' ? -8 : bulletSpeed),
             color: team === 'player' ? player.color : 'red',
             ...options,
         };
         
-        // ★★★ 追加点: ホーミング弾に初期方向を与える ★★★
         if (options.type === 'homing') {
             const angle = Math.atan2((player.y + player.height / 2) - y, (player.x + player.width / 2) - x);
             bulletData.dx = Math.cos(angle);
@@ -318,18 +318,15 @@
         for (let i = bullets.length - 1; i >= 0; i--) {
             const bullet = bullets[i];
             
-            // ★★★ 修正点: ホーミング弾の追尾ロジック ★★★
             if (bullet.type === 'homing') {
                 const targetAngle = Math.atan2((player.y + player.height / 2) - bullet.y, (player.x + player.width / 2) - bullet.x);
                 const targetDx = Math.cos(targetAngle);
                 const targetDy = Math.sin(targetAngle);
                 
-                // 現在の進行方向とターゲット方向をブレンドして、追尾を緩やかにする
-                const turnSpeed = 0.02; // この値を小さくすると追尾が弱くなる
+                const turnSpeed = 0.02;
                 bullet.dx = bullet.dx * (1 - turnSpeed) + targetDx * turnSpeed;
                 bullet.dy = bullet.dy * (1 - turnSpeed) + targetDy * turnSpeed;
                 
-                // 方向ベクトルを正規化して速度を一定に保つ
                 const magnitude = Math.sqrt(bullet.dx * bullet.dx + bullet.dy * bullet.dy);
                 bullet.dx /= magnitude;
                 bullet.dy /= magnitude;
@@ -340,7 +337,6 @@
             } else {
                 bullet.y += bullet.speed;
             }
-            // ★★★ 修正点: 画面外に出た弾を消す（左右も判定） ★★★
             if (bullet.y < 0 || bullet.y > canvas.height || bullet.x < 0 || bullet.x > canvas.width) {
                 bullets.splice(i, 1);
             }
