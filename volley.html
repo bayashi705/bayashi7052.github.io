@@ -2,162 +2,412 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>バレーボールの魅力</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>インベーダーゲーム</title>
     <style>
-        /* 基本的なスタイルのリセットと設定 */
+        :root {
+            --bg-color: #000;
+            --text-color: #fff;
+            --player-color: #00ff00; /* 緑 */
+            --enemy-color: #ffffff;  /* 白 */
+            --bullet-color: #ff0000; /* 赤 */
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+            font-family: 'Press Start 2P', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: var(--bg-color);
             margin: 0;
-            padding: 0;
-            background-color: #f8fafc; /* 明るい背景色 */
-            color: #1f2937; /* 濃いテキスト色 */
-            line-height: 1.7;
-        }
-
-        /* 全体を囲むコンテナ */
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        /* ヘッダー部分のスタイル */
-        header {
+            overflow: hidden;
+            color: var(--text-color);
             text-align: center;
-            padding: 40px 0;
-            border-bottom: 1px solid #e5e7eb;
-            margin-bottom: 40px;
         }
 
-        header h1 {
-            font-size: 2.5rem;
-            font-weight: 800;
-            color: #1d4ed8; /* 青系の色 */
-            margin: 0;
+        .game-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 500px;
+            padding: 1rem;
+            box-sizing: border-box;
         }
 
-        header p {
-            font-size: 1.1rem;
-            color: #4b5563; /* 少し薄いテキスト色 */
-            margin-top: 0.5rem;
-        }
-
-        /* 各セクションのスタイル */
-        .section {
-            margin-bottom: 50px;
-        }
-
-        .section h2 {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: #1e3a8a;
-            padding-bottom: 10px;
-            border-bottom: 3px solid #60a5fa; /* 明るい青の下線 */
-            margin-bottom: 20px;
-        }
-
-        .section p, .section ul {
+        .info-panel {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 1rem;
             font-size: 1rem;
+            font-weight: bold;
         }
 
-        .section ul {
-            list-style: none;
-            padding-left: 0;
+        canvas {
+            width: 100%;
+            aspect-ratio: 4 / 3;
+            background-color: #111;
+            border: 2px solid var(--text-color);
+            display: block;
+            cursor: pointer;
         }
-
-        .section li {
-            background-color: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            padding: 15px 20px;
-            margin-bottom: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-
-        .section li strong {
-            color: #1e40af;
-        }
-
-        /* 画像のスタイル */
-        img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 12px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-            margin-top: 20px;
-        }
-
-        /* フッターのスタイル */
-        footer {
+        
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
             text-align: center;
-            margin-top: 60px;
-            padding-top: 30px;
-            border-top: 1px solid #e5e7eb;
-            color: #6b7280;
+            z-index: 100;
         }
 
-        /* スマートフォン用の調整 */
-        @media (max-width: 600px) {
-            header h1 {
-                font-size: 2rem;
-            }
-            .section h2 {
-                font-size: 1.5rem;
-            }
+        .modal-content {
+            background: #111;
+            padding: 2rem;
+            border: 2px solid #fff;
+        }
+
+        #modal-title {
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+        }
+
+        #restart-button {
+            background-color: #333;
+            padding: 0.8rem 2rem;
+            border: 2px solid #fff;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <header>
-            <h1>バレーボールの魅力</h1>
-            <p>仲間と繋ぐ、熱いチームスポーツの世界へようこそ！</p>
-        </header>
-
-        <main>
-            <section class="section">
-                <h2>バレーボールとは？</h2>
-                <p>
-                    バレーボールは、ネットを挟んで2つのチームがボールを打ち合い、得点を競うスポーツです。ボールを床に落とさずに3回以内のタッチで相手コートに返すのが基本。仲間と息を合わせてボールを繋ぐ一体感と、強烈なスパイクが決まった時の爽快感が最大の魅力です。
-                </p>
-                <img src="https://placehold.co/800x400/60a5fa/ffffff?text=バレーボールの試合のイメージ" alt="バレーボールの試合のイメージ">
-            </section>
-
-            <section class="section">
-                <h2>基本的なルール</h2>
-                <ul>
-                    <li><strong>得点:</strong> ボールが相手コートの床に落ちる、相手チームが反則をする、などで1点が入ります。</li>
-                    <li><strong>タッチは3回まで:</strong> 1チームはボールに3回まで触って相手コートに返さなければいけません。（ブロックは1回に数えません）</li>
-                    <li><strong>ローテーション:</strong> サーブ権が移動するたびに、選手は時計回りに1つずつポジションを移動します。</li>
-                    <li><strong>同じ選手は連続で触れない:</strong> 1人の選手が連続でボールに触ることはできません。（ブロックの後の1回目のタッチはOK）</li>
-                </ul>
-            </section>
-
-            <section class="section">
-                <h2>ポジション紹介</h2>
-                <ul>
-                    <li><strong>セッター (S):</strong> チームの司令塔。2回目のタッチでボールに触り、アタッカーにトスを上げます。</li>
-                    <li><strong>アウトサイドヒッター (OH):</strong> レフト側からスパイクを打つ攻撃の中心選手。攻守の要です。</li>
-                    <li><strong>オポジット (OP):</strong> ライト側からスパイクを打つ、セッターの対角にいる選手。スーパーエースとも呼ばれます。</li>
-                    <li><strong>ミドルブロッカー (MB):</strong> コート中央で相手の攻撃をブロックしたり、速攻を仕掛ける選手です。</li>
-                    <li><strong>リベロ (L):</strong> 守備専門の選手。後衛でレシーブ（サーブやスパイクを拾うこと）を担当します。</li>
-                </ul>
-            </section>
-
-            <section class="section">
-                <h2>バレーボールのここが面白い！</h2>
-                <p>
-                    バレーボールの本当の面白さは、単なる技術だけではありません。苦しい場面で仲間を助けるレシーブ、チームを勢いづけるスーパープレー、そして全員で掴み取った1点の喜び。一人ひとりが自分の役割を果たし、それが繋がって大きな力になる。その過程こそが、バレーボール最大の魅力と言えるでしょう。
-                </p>
-            </section>
-        </main>
-
-        <footer>
-            <p>&copy; 2025 バレーボール紹介ページ</p>
-        </footer>
+<div class="game-wrapper">
+    <div class="info-panel">
+        <span>SCORE: <span id="score">0</span></span>
+        <span>LIVES: <span id="lives">3</span></span>
     </div>
 
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="game-over-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <h2 id="modal-title"></h2>
+            <button id="restart-button">もう一度</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // DOM要素
+    const scoreEl = document.getElementById('score');
+    const livesEl = document.getElementById('lives');
+    const gameOverModal = document.getElementById('game-over-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const restartButton = document.getElementById('restart-button');
+
+    // ゲーム設定
+    let score, lives;
+    let gameOver;
+    let animationFrameId;
+
+    // プレイヤー
+    const player = {
+        width: 40,
+        height: 20,
+        x: 0,
+        y: 0,
+        speed: 5,
+        color: 'lime',
+    };
+
+    // 弾
+    const bullets = [];
+    const bulletSpeed = 5;
+    let autoFireInterval;
+
+    // インベーダー
+    let invaders = [];
+    const invaderSize = 20;
+    let invaderSpeed = 0.5;
+    const invaderFireChance = 0.005;
+    let invaderSpawnInterval;
+
+    // 操作キー（PC用）とタッチ操作用の状態
+    const keys = {
+        ArrowLeft: false,
+        ArrowRight: false,
+        ArrowUp: false,
+        ArrowDown: false,
+    };
+    let isDragging = false;
+    let touchStartX, touchStartY, playerStartX, playerStartY;
+
+    function init() {
+        canvas.width = 480;
+        canvas.height = 360;
+        
+        score = 0;
+        lives = 3;
+        gameOver = false;
+        
+        player.x = (canvas.width - player.width) / 2;
+        player.y = canvas.height - player.height - 10;
+        
+        invaders = [];
+        invaderSpeed = 0.5;
+        bullets.length = 0;
+        
+        gameOverModal.style.display = 'none';
+        updateUI();
+        
+        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        if (invaderSpawnInterval) clearInterval(invaderSpawnInterval);
+        if (autoFireInterval) clearInterval(autoFireInterval);
+        
+        invaderSpawnInterval = setInterval(spawnInvader, 1500);
+        autoFireInterval = setInterval(fireBullet, 400);
+        gameLoop();
+    }
+    
+    function spawnInvader() {
+        if (gameOver) return;
+        const initialX = Math.random() * (canvas.width - invaderSize);
+        invaders.push({
+            x: initialX,
+            y: 0,
+            width: invaderSize,
+            height: invaderSize,
+            color: 'white',
+            initialX: initialX,
+            movePhase: Math.random() * Math.PI * 2
+        });
+    }
+
+    // --- イベントリスナー ---
+    document.addEventListener('keydown', (e) => { if(keys[e.code] !== undefined) keys[e.code] = true; });
+    document.addEventListener('keyup', (e) => { if(keys[e.code] !== undefined) keys[e.code] = false; });
+    
+    function fireBullet() {
+        if (gameOver) return;
+        bullets.push({
+            x: player.x + player.width / 2 - 2.5,
+            y: player.y,
+            width: 5,
+            height: 10,
+            color: player.color,
+            speed: -bulletSpeed,
+            team: 'player'
+        });
+    }
+    
+    canvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        isDragging = true;
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        playerStartX = player.x;
+        playerStartY = player.y;
+    });
+
+    canvas.addEventListener('touchmove', (e) => {
+        if (!isDragging || gameOver) return;
+        e.preventDefault();
+        const deltaX = e.touches[0].clientX - touchStartX;
+        const deltaY = e.touches[0].clientY - touchStartY;
+        
+        player.x = playerStartX + deltaX;
+        player.y = playerStartY + deltaY;
+
+        // 画面外に出ないように制限
+        if (player.x < 0) player.x = 0;
+        if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
+        if (player.y < canvas.height / 2) player.y = canvas.height / 2;
+        if (player.y > canvas.height - player.height) player.y = canvas.height - player.height;
+    });
+
+    canvas.addEventListener('touchend', () => { isDragging = false; });
+    canvas.addEventListener('touchcancel', () => { isDragging = false; });
+    
+
+    function handlePlayerInput() {
+        // PCキーボード操作
+        if (keys.ArrowLeft && player.x > 0) player.x -= player.speed;
+        if (keys.ArrowRight && player.x < canvas.width - player.width) player.x += player.speed;
+        if (keys.ArrowUp && player.y > canvas.height / 2) player.y -= player.speed;
+        if (keys.ArrowDown && player.y < canvas.height - player.height) player.y += player.speed;
+    }
+
+    function gameLoop() {
+        if (gameOver) return;
+        
+        handlePlayerInput();
+        updateGameObjects();
+        draw();
+        checkCollisions();
+        
+        animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function updateGameObjects() {
+        for (let i = bullets.length - 1; i >= 0; i--) {
+            const bullet = bullets[i];
+            bullet.y += bullet.speed;
+            if (bullet.y < 0 || bullet.y > canvas.height) {
+                bullets.splice(i, 1);
+            }
+        }
+
+        for (let i = invaders.length - 1; i >= 0; i--) {
+            const invader = invaders[i];
+            invader.y += invaderSpeed;
+            
+            const wobble = Math.sin(invader.y * 0.03 + invader.movePhase) * 40;
+            invader.x = invader.initialX + wobble;
+
+            if (invader.y > canvas.height) {
+                invaders.splice(i, 1);
+            }
+            if (Math.random() < invaderFireChance) {
+                bullets.push({
+                    x: invader.x + invader.width / 2 - 2.5,
+                    y: invader.y + invader.height,
+                    width: 5,
+                    height: 10,
+                    color: 'red',
+                    speed: bulletSpeed, 
+                    team: 'invader'
+                });
+            }
+        }
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.fillStyle = player.color;
+        ctx.fillRect(player.x, player.y, player.width, player.height);
+        
+        bullets.forEach(bullet => {
+            ctx.fillStyle = bullet.color;
+            ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+        });
+
+        invaders.forEach(invader => {
+            ctx.fillStyle = invader.color;
+            ctx.fillRect(invader.x, invader.y, invader.width, invader.height);
+        });
+    }
+
+    function checkCollisions() {
+        // プレイヤーの弾 vs 敵
+        for (let i = bullets.length - 1; i >= 0; i--) {
+            const bullet = bullets[i];
+            if (!bullet || bullet.team !== 'player') continue;
+            
+            for (let j = invaders.length - 1; j >= 0; j--) {
+                const invader = invaders[j];
+                if (isColliding(bullet, invader)) {
+                    bullets.splice(i, 1);
+                    invaders.splice(j, 1);
+                    score += 10;
+                    updateUI();
+                    if (score > 0 && score % 100 === 0) {
+                         invaderSpeed += 0.1;
+                         clearInterval(invaderSpawnInterval);
+                         const newInterval = Math.max(200, 1500 - score * 2);
+                         invaderSpawnInterval = setInterval(spawnInvader, newInterval);
+                    }
+                    break; 
+                }
+            }
+        }
+
+        // 敵の弾 vs プレイヤー
+        for (let i = bullets.length - 1; i >= 0; i--) {
+            const bullet = bullets[i];
+            if (!bullet || bullet.team !== 'invader') continue;
+
+            if (isColliding(bullet, player)) {
+                bullets.splice(i, 1);
+                lives--;
+                updateUI();
+                if (lives <= 0) endGame(false);
+                break;
+            }
+        }
+        
+        // ★★★ 修正点: ゲームオーバー条件の変更 ★★★
+        for (let i = invaders.length - 1; i >= 0; i--) {
+            const invader = invaders[i];
+            let shouldRemoveInvader = false;
+            
+            // プレイヤーとの接触
+            if (isColliding(invader, player)) {
+                lives--;
+                shouldRemoveInvader = true;
+            } 
+            // 画面下への到達
+            else if (invader.y + invader.height >= canvas.height) {
+                lives--;
+                shouldRemoveInvader = true;
+            }
+            
+            if (shouldRemoveInvader) {
+                invaders.splice(i, 1); // 接触/到達した敵を消す
+                updateUI();
+                if (lives <= 0) {
+                    endGame(false);
+                    return; // ループを抜ける
+                }
+            }
+        }
+        
+        // 勝利条件
+        if (score >= 500) {
+            endGame(true);
+        }
+    }
+    
+    function isColliding(rect1, rect2) {
+        return rect1.x < rect2.x + rect2.width &&
+               rect1.x + rect1.width > rect2.x &&
+               rect1.y < rect2.y + rect2.height &&
+               rect1.y + rect1.height > rect2.y;
+    }
+    
+    function updateUI() {
+        scoreEl.textContent = score;
+        livesEl.textContent = lives;
+    }
+    
+    function endGame(isWin) {
+        if (gameOver) return;
+        gameOver = true;
+        cancelAnimationFrame(animationFrameId);
+        clearInterval(invaderSpawnInterval);
+        clearInterval(autoFireInterval);
+        modalTitle.textContent = isWin ? '勝利！' : 'ゲームオーバー';
+        gameOverModal.style.display = 'flex';
+    }
+
+    restartButton.addEventListener('click', init);
+    
+    init();
+
+</script>
 </body>
 </html>
