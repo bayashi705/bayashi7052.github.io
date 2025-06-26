@@ -51,9 +51,25 @@
             background-color: #111;
             border: 2px solid var(--text-color);
             display: block;
-            cursor: pointer;
         }
         
+        /* ★★★ 追加点: タッチ操作エリアのスタイル ★★★ */
+        #touch-control-area {
+            width: 100%;
+            height: 80px; /* 操作エリアの高さ */
+            margin-top: 1rem;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            border: 1px dashed #555;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #888;
+            font-size: 0.8rem;
+            cursor: grab;
+            -webkit-tap-highlight-color: transparent;
+        }
+
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -99,6 +115,11 @@
 
     <canvas id="gameCanvas"></canvas>
     
+    <!-- ★★★ 追加点: タッチ操作専用のエリア ★★★ -->
+    <div id="touch-control-area">
+        <p>ここをドラッグして操作</p>
+    </div>
+    
     <div id="game-over-modal" class="modal-overlay" style="display: none;">
         <div class="modal-content">
             <h2 id="modal-title"></h2>
@@ -118,6 +139,7 @@
     const gameOverModal = document.getElementById('game-over-modal');
     const modalTitle = document.getElementById('modal-title');
     const restartButton = document.getElementById('restart-button');
+    const touchControlArea = document.getElementById('touch-control-area'); // ★★★ 追加
 
     // ゲーム設定
     let score, lives;
@@ -214,7 +236,8 @@
         });
     }
     
-    canvas.addEventListener('touchstart', (e) => {
+    // ★★★ 修正点: イベントリスナーをタッチ操作エリアに設定 ★★★
+    touchControlArea.addEventListener('touchstart', (e) => {
         e.preventDefault();
         isDragging = true;
         touchStartX = e.touches[0].clientX;
@@ -223,7 +246,7 @@
         playerStartY = player.y;
     });
 
-    canvas.addEventListener('touchmove', (e) => {
+    touchControlArea.addEventListener('touchmove', (e) => {
         if (!isDragging || gameOver) return;
         e.preventDefault();
         const deltaX = e.touches[0].clientX - touchStartX;
@@ -239,8 +262,8 @@
         if (player.y > canvas.height - player.height) player.y = canvas.height - player.height;
     });
 
-    canvas.addEventListener('touchend', () => { isDragging = false; });
-    canvas.addEventListener('touchcancel', () => { isDragging = false; });
+    touchControlArea.addEventListener('touchend', () => { isDragging = false; });
+    touchControlArea.addEventListener('touchcancel', () => { isDragging = false; });
     
 
     function handlePlayerInput() {
@@ -350,33 +373,29 @@
             }
         }
         
-        // ★★★ 修正点: ゲームオーバー条件の変更 ★★★
         for (let i = invaders.length - 1; i >= 0; i--) {
             const invader = invaders[i];
             let shouldRemoveInvader = false;
             
-            // プレイヤーとの接触
             if (isColliding(invader, player)) {
                 lives--;
                 shouldRemoveInvader = true;
             } 
-            // 画面下への到達
             else if (invader.y + invader.height >= canvas.height) {
                 lives--;
                 shouldRemoveInvader = true;
             }
             
             if (shouldRemoveInvader) {
-                invaders.splice(i, 1); // 接触/到達した敵を消す
+                invaders.splice(i, 1);
                 updateUI();
                 if (lives <= 0) {
                     endGame(false);
-                    return; // ループを抜ける
+                    return;
                 }
             }
         }
         
-        // 勝利条件
         if (score >= 500) {
             endGame(true);
         }
