@@ -277,7 +277,6 @@
         player.x = playerStartX + deltaX;
         player.y = playerStartY + deltaY;
 
-        // ★★★ 修正点: タッチ操作時の移動範囲を更新 ★★★
         if (player.x < -player.width / 2) player.x = -player.width / 2;
         if (player.x > canvas.width - player.width / 2) player.x = canvas.width - player.width / 2;
         if (player.y < canvas.height / 2) player.y = canvas.height / 2;
@@ -289,13 +288,11 @@
     
 
     function handlePlayerInput() {
-        // PCキーボード操作
         if (keys.ArrowLeft) player.x -= player.speed;
         if (keys.ArrowRight) player.x += player.speed;
         if (keys.ArrowUp) player.y -= player.speed;
         if (keys.ArrowDown) player.y += player.speed;
 
-        // ★★★ 修正点: キーボード操作時の移動範囲を更新 ★★★
         if (player.x < -player.width / 2) player.x = -player.width / 2;
         if (player.x > canvas.width - player.width / 2) player.x = canvas.width - player.width / 2;
         if (player.y < canvas.height / 2) player.y = canvas.height / 2;
@@ -407,7 +404,10 @@
             }
         }
         
-        if (score >= 500) endGame(true);
+        // ★★★ 修正点: 勝利条件を1000点に変更 ★★★
+        if (score >= 1000) {
+            endGame(true);
+        }
     }
     
     function activatePowerUp() {
